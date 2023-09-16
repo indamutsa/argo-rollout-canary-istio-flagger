@@ -54,7 +54,7 @@ mkdir -p /cmd
 ```bash
 # Install common utilities and beautify the terminal
 apk update
-apk add --no-cache docker curl wget py-pip python3-dev libffi-dev openssl-dev gcc libc-dev make  zip bash openssl mongodb-tools git docker-compose zsh vim nano unzip npm
+apk add --no-cache docker curl wget py-pip python3-dev libffi-dev openssl-dev gcc libc-dev make  zip bash openssl mongodb-tools git docker-compose zsh vim nano unzip npm jq
 # Install zsh for a cool looking terminal with plugins auto-suggestions and syntax-highlighting
 sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 
@@ -307,6 +307,7 @@ git remote -v
 Create the ArgoCD application using the following command:
 
 <!-- prettier-ignore-start -->
+```bash
 cat << 'EOF' > argocd-application.yaml
 # argocd-application.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -336,7 +337,7 @@ spec:
       - PrunePropagationPolicy=foreground
       - PruneLast=true
 EOF
-
+```
 <!-- prettier-ignore-end -->
 
 Apply the ArgoCD application:
@@ -379,3 +380,10 @@ argocd app get my-bookinfo-app
 
 **Review Application State**:  
 In ArgoCD, you should now see the application's resources, and it should indicate that the app is `Synced` and `Healthy`.
+
+Run the following command to see the resources that were created in the cluster:
+
+```bash
+argocd app get my-bookinfo-app --output json | jq -r '.status.sync.status'
+argocd app get my-bookinfo-app --output json | jq -r '.status.health.status'
+```
