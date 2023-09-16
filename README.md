@@ -21,6 +21,7 @@ Start the dashboard:
 
 ```bash
 minikube dashboard
+# http://127.0.0.1:35587/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/#/workloads?namespace=default
 ```
 
 # Getting Started with Istio
@@ -199,6 +200,15 @@ You've now installed both ArgoCD and Argo Rollouts, setting the stage for a more
 
 ### Step 2: Install Istio
 
+Let us first have the ip of the minikube tunnel
+
+```bash
+minikube tunnel
+
+# or
+minikube ip
+```
+
 Install Istio
 
 ```bash
@@ -230,7 +240,7 @@ The goal of this step is to deploy the initial version of the BookInfo applicati
    Apply the Kubernetes manifests for the BookInfo application. Make sure you're working in the namespace where Istio injection is enabled (as per Step 2):
 
 ```bash
- kubectl apply -f bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -f bookinfo/bookinfo.yaml
 ```
 
 3. **Wait for Pods to be Running**:
@@ -257,36 +267,75 @@ The aim here is to set up Istio ingress, gateway, and virtual service resources.
    To control ingress traffic for your application, you'll need to define an Istio Gateway:
 
 ```bash
-kubectl apply -f bookinfo/networking/bookinfo-gateway.yaml
-```
+kubectl apply -f bookinfo/bookinfo-gateway.yaml
 
-2. **Apply Virtual Services**:  
-   Virtual services in Istio enable fine-grained traffic routing. Apply the virtual service definitions that route traffic through the gateway to your application:
-
-```bash
-kubectl apply -f bookinfo/networking/virtual-service-all-v1.yaml
-```
-
-3. **Confirm Configuration**:  
-   After applying the gateway and virtual services, verify they are correctly set up:
-
-```bash
+# To confirm that the Bookinfo gateway has been created, run the following command:
 kubectl get gateway
-kubectl get virtualservices
 ```
 
-4. **Test External Access**:  
-   At this point, you should be able to access the BookInfo app via the Istio ingress gateway. Find the external IP for the ingress:
+2. Set the following environment variables to the name and namespace where the Istio ingress gateway is located in your cluster:
 
 ```bash
-kubectl get svc istio-ingressgateway -n istio-system
+export INGRESS_NAME=istio-ingressgateway
+export INGRESS_NS=istio-system
 ```
 
-Then, access the app using the obtained external IP and the configured port. If you've set it up using standard HTTP, you can navigate to it using your browser.
+3. Run the following command to determine if your Kubernetes cluster is in an environment that supports external load balancers:
 
-Great, let's integrate Git with ArgoCD for better management of our application lifecycle. We'll also define the Argo Rollout manifests for a canary deployment.
+```bash
+kubectl get svc "$INGRESS_NAME" -n "$INGRESS_NS"
+# NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP      PORT(S)   AGE
+# istio-ingressgateway   LoadBalancer   172.21.109.129   130.211.10.121   ...       17h
+```
+
+If the EXTERNAL-IP is set to `<pending>`, or equal to cluster IP, use this command to patch the service with a load balancer:
+
+```bash
+# First get the Minikube IP into a variable
+MINIKUBE_IP=$(minikube ip)
+
+# Now use it in your kubectl patch command
+kubectl patch svc istio-ingressgateway -n istio-system --type='json' -p="[{'op': 'add', 'path': '/spec/externalIPs', 'value': ['$MINIKUBE_IP']}]"
+```
+
+4. Set the ingress IP and ports using the following commands:
+
+```sh
+# Outside the container
+export INGRESS_HOST=$(kubectl get svc istio-ingressgateway -n istio-system -o jsonpath='{.spec.externalIPs[0]}')
+export INGRESS_PORT=$(kubectl -n "$INGRESS_NS" get service "$INGRESS_NAME" -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
+export SECURE_INGRESS_PORT=$(kubectl -n "$INGRESS_NS" get service "$INGRESS_NAME" -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
+export TCP_INGRESS_PORT=$(kubectl -n "$INGRESS_NS" get service "$INGRESS_NAME" -o jsonpath='{.spec.ports[?(@.name=="tcp")].port}')
+echo "Ingress IP: $INGRESS_HOST"
+echo "Ingress Port: $INGRESS_PORT"
+echo "Secure Ingress Port: $SECURE_INGRESS_PORT"
+echo "TCP Ingress Port: $TCP_INGRESS_PORT"
+```
+
+5. Set GATEWAY_URL:
+
+```bash
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+echo "Gateway URL: $GATEWAY_URL"
+```
+
+6. Confirm the app is accessible from outside the cluster
+   To confirm that the Bookinfo application is accessible from outside the cluster, run the following curl command:
+
+```bash
+curl -s "http://${GATEWAY_URL}/productpage" | grep -o "<title>.*</title>"
+# <title>Simple Bookstore App</title>
+```
+
+The $INGRESS_HOST is the external ip of minikube tunnel or miniKube ip and the $INGRESS_PORT is 80.
 
 ### Step 5: Integrate Git with ArgoCD and Create Rollout Manifests
+
+In the default namespace, delete the BookInfo application, we spin it with ArgoCD application:
+
+```bash
+kubectl delete -f bookinfo
+```
 
 **Objective:**  
 The aim here is to configure ArgoCD to sync with a Git repository where your application's manifests are stored. We'll use GitHub for this example and create a repository for our Argo Rollout configuration.
@@ -359,9 +408,7 @@ kubectl get svc
 # Check the pods
 kubectl get pods
 
-# To confirm that the Bookinfo application is running, send a request to it by a curl command from some pod, for example from ratings:
-kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
-# <title>Simple Bookstore App</title>
+
 ```
 
 **Sync Application**:  
