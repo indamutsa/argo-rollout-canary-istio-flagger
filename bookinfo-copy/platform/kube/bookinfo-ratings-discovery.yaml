@@ -28,4 +28,4 @@ spec:
     name: http
   selector:
     app: ratings
----
+

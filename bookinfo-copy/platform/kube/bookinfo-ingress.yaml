@@ -60,4 +60,4 @@ spec:
             name: productpage
             port:
               number: 9080
----
+

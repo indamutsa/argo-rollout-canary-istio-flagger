@@ -299,4 +299,68 @@ git init
 
 # Start the creation of the repository using the GitHub CLI
 gh repo create
+
+# Show github repository remote url
+git remote -v
 ```
+
+Create the ArgoCD application using the following command:
+
+<!-- prettier-ignore-start -->
+cat << 'EOF' > argocd-application.yaml
+# argocd-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-bookinfo-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/indamutsa/argo-rollout-canary-istio-flagger.git
+    targetRevision: HEAD
+    path: bookinfo/platform/kube
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - Validate=true
+      - CreateNamespace=false
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+EOF
+
+<!-- prettier-ignore-end -->
+
+Apply the ArgoCD application:
+
+```bash
+kubectl apply -f argocd-application.yaml
+```
+
+**Check ArgoCD Dashboard**:  
+Log in to the ArgoCD dashboard to verify that the new application `my-bookinfo-app` is listed. You should see it trying to sync the state of the application in the cluster with the state defined in the Git repository.
+
+**Sync Application**:  
+If the application doesn't sync automatically (depending on your settings), you can manually sync it from the dashboard or use the `argocd` CLI to initiate a sync:
+
+```bash
+argocd app sync my-bookinfo-app
+```
+
+**Check Sync Status**:  
+Ensure that the sync operation completes successfully. You can monitor the sync status on the ArgoCD dashboard or by running:
+
+```bash
+argocd app get my-bookinfo-app
+```
+
+**Review Application State**:  
+In ArgoCD, you should now see the application's resources, and it should indicate that the app is `Synced` and `Healthy`.

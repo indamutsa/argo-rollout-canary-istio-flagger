@@ -13,21 +13,44 @@
 #   limitations under the License.
 
 ##################################################################################################
-# Ratings service
+# Reviews service v2
 ##################################################################################################
-apiVersion: v1
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: ratings
+  name: reviews-v2
   labels:
-    app: ratings
-    service: ratings
+    app: reviews
+    version: v2
 spec:
-  ipFamilyPolicy: RequireDualStack
-  ipFamilies: [IPv6, IPv4]
-  ports:
-  - port: 9080
-    name: http
+  replicas: 1
   selector:
-    app: ratings
----
+    matchLabels:
+      app: reviews
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: v2
+    spec:
+      containers:
+      - name: reviews
+        image: docker.io/istio/examples-bookinfo-reviews-v2:1.18.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: LOG_DIR
+          value: "/tmp/logs"
+        ports:
+        - containerPort: 9080
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: wlp-output
+          mountPath: /opt/ibm/wlp/output
+      volumes:
+      - name: wlp-output
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+

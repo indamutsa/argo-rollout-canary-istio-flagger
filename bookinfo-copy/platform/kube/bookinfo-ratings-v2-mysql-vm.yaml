@@ -12,45 +12,42 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-##################################################################################################
-# Reviews service v2
-##################################################################################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: reviews-v2
+  name: ratings-v2-mysql-vm
   labels:
-    app: reviews
-    version: v2
+    app: ratings
+    version: v2-mysql-vm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: reviews
-      version: v2
+      app: ratings
+      version: v2-mysql-vm
   template:
     metadata:
       labels:
-        app: reviews
-        version: v2
+        app: ratings
+        version: v2-mysql-vm
     spec:
       containers:
-      - name: reviews
-        image: docker.io/istio/examples-bookinfo-reviews-v2:1.18.0
+      - name: ratings
+        image: docker.io/istio/examples-bookinfo-ratings-v2:1.18.0
         imagePullPolicy: IfNotPresent
         env:
-        - name: LOG_DIR
-          value: "/tmp/logs"
+          # This assumes you registered your mysql vm as
+          # istioctl register -n vm mysqldb 1.2.3.4 3306
+          - name: DB_TYPE
+            value: "mysql"
+          - name: MYSQL_DB_HOST
+            value: mysqldb.vm.svc.cluster.local
+          - name: MYSQL_DB_PORT
+            value: "3306"
+          - name: MYSQL_DB_USER
+            value: root
+          - name: MYSQL_DB_PASSWORD
+            value: password
         ports:
         - containerPort: 9080
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-        - name: wlp-output
-          mountPath: /opt/ibm/wlp/output
-      volumes:
-      - name: wlp-output
-        emptyDir: {}
-      - name: tmp
-        emptyDir: {}
----
+
