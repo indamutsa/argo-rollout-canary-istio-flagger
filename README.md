@@ -343,10 +343,25 @@ Apply the ArgoCD application:
 
 ```bash
 kubectl apply -f argocd-application.yaml
+# Inside book, i deleted everything except bookinfo.yaml
 ```
 
 **Check ArgoCD Dashboard**:  
 Log in to the ArgoCD dashboard to verify that the new application `my-bookinfo-app` is listed. You should see it trying to sync the state of the application in the cluster with the state defined in the Git repository.
+
+Check the services:
+
+```bash
+# Check the services
+kubectl get svc
+
+# Check the pods
+kubectl get pods
+
+# To confirm that the Bookinfo application is running, send a request to it by a curl command from some pod, for example from ratings:
+kubectl exec "$(kubectl get pod -l app=ratings -o jsonpath='{.items[0].metadata.name}')" -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
+# <title>Simple Bookstore App</title>
+```
 
 **Sync Application**:  
 If the application doesn't sync automatically (depending on your settings), you can manually sync it from the dashboard or use the `argocd` CLI to initiate a sync:
