@@ -55,7 +55,7 @@ mkdir -p /cmd
 ```bash
 # Install common utilities and beautify the terminal
 apk update
-apk add --no-cache docker curl wget py-pip python3-dev libffi-dev openssl-dev gcc libc-dev make  zip bash openssl mongodb-tools git docker-compose zsh vim nano unzip npm jq
+apk add --no-cache docker curl wget py-pip python3-dev libffi-dev openssl-dev gcc libc-dev make  zip bash openssl mongodb-tools git docker-compose zsh vim nano unzip npm jq kustomize
 # Install zsh for a cool looking terminal with plugins auto-suggestions and syntax-highlighting
 sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 
@@ -97,6 +97,13 @@ mv ./kind /usr/local/bin/kind
 curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
 install -m 555 argocd-linux-amd64 /usr/bin/argocd
 rm argocd-linux-amd64
+
+# Install argo-rollouts plugin
+curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+chmod +x kubectl-argo-rollouts-linux-amd64
+mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+
+
 
 curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.19.0 TARGET_ARCH=x86_64 sh -
 mv istio-1.19.0/bin/istioctl /usr/local/bin/
@@ -178,7 +185,7 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 3. Open your browser and go to `https://localhost:8080`. The default username is `admin`, and the password can be retrieved it using:
 
 ```bash
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
 ```
 
 #### Argo Rollouts Installation
